@@ -4,7 +4,6 @@ import { Card } from '@/components/ui/card';
 import Map from '@/components/Map';
 import SlugChaseLogic from '@/components/SlugChaseLogic';
 import { Coins, Target, Trophy, Navigation } from 'lucide-react';
-import { Geolocation } from '@capacitor/geolocation';
 
 const Game = () => {
   const [userPosition, setUserPosition] = useState<[number, number] | null>(null);
@@ -13,64 +12,60 @@ const Game = () => {
   const [dailyGoal] = useState(5000); // 5km daily goal
   const [locationError, setLocationError] = useState<string | null>(null);
   const [isTracking, setIsTracking] = useState(false);
-  const watchIdRef = useRef<string | null>(null);
+  const [accuracy, setAccuracy] = useState<number | null>(null);
+  const watchIdRef = useRef<number | null>(null);
 
-  // Start GPS tracking with Capacitor (better for mobile)
-  const startTracking = async () => {
-    try {
-      setLocationError(null);
-      setIsTracking(true);
+  // Start GPS tracking (works on phone browsers!)
+  const startTracking = () => {
+    if (!navigator.geolocation) {
+      setLocationError('GPS not supported on this device');
+      return;
+    }
 
-      // Request permissions first
-      const permission = await Geolocation.checkPermissions();
-      if (permission.location !== 'granted') {
-        const request = await Geolocation.requestPermissions();
-        if (request.location !== 'granted') {
-          setLocationError('Location permission denied');
-          setIsTracking(false);
-          return;
-        }
+    setLocationError(null);
+    setIsTracking(true);
+
+    // Get current position first
+    navigator.geolocation.getCurrentPosition(
+      (position) => {
+        setUserPosition([position.coords.longitude, position.coords.latitude]);
+        setAccuracy(position.coords.accuracy);
+        setLocationError(null);
+      },
+      (error) => {
+        console.error('GPS error:', error);
+        setLocationError(error.message);
+      },
+      { 
+        enableHighAccuracy: true, 
+        timeout: 10000, 
+        maximumAge: 0 
       }
+    );
 
-      // Get current position first
-      const position = await Geolocation.getCurrentPosition({
+    // Watch position for continuous tracking
+    watchIdRef.current = navigator.geolocation.watchPosition(
+      (position) => {
+        setUserPosition([position.coords.longitude, position.coords.latitude]);
+        setAccuracy(position.coords.accuracy);
+        setLocationError(null);
+      },
+      (error) => {
+        console.error('GPS error:', error);
+        setLocationError(error.message);
+      },
+      { 
         enableHighAccuracy: true,
         timeout: 10000,
         maximumAge: 0
-      });
-      
-      setUserPosition([position.coords.longitude, position.coords.latitude]);
-
-      // Watch position for continuous tracking
-      watchIdRef.current = await Geolocation.watchPosition(
-        {
-          enableHighAccuracy: true,
-          timeout: 10000,
-          maximumAge: 0
-        },
-        (position, err) => {
-          if (err) {
-            console.error('GPS error:', err);
-            setLocationError(err.message);
-            return;
-          }
-          if (position) {
-            setUserPosition([position.coords.longitude, position.coords.latitude]);
-            setLocationError(null);
-          }
-        }
-      );
-    } catch (error: any) {
-      console.error('Error starting GPS:', error);
-      setLocationError(error.message || 'Failed to start GPS tracking');
-      setIsTracking(false);
-    }
+      }
+    );
   };
 
   // Stop tracking
-  const stopTracking = async () => {
-    if (watchIdRef.current) {
-      await Geolocation.clearWatch({ id: watchIdRef.current });
+  const stopTracking = () => {
+    if (watchIdRef.current !== null) {
+      navigator.geolocation.clearWatch(watchIdRef.current);
       watchIdRef.current = null;
     }
     setIsTracking(false);
@@ -80,8 +75,8 @@ const Game = () => {
   useEffect(() => {
     startTracking();
     return () => {
-      if (watchIdRef.current) {
-        Geolocation.clearWatch({ id: watchIdRef.current });
+      if (watchIdRef.current !== null) {
+        navigator.geolocation.clearWatch(watchIdRef.current);
       }
     };
   }, []);
@@ -127,16 +122,20 @@ const Game = () => {
               </Button>
             </div>
             {locationError && (
-              <p className="text-sm text-destructive mt-2">{locationError}</p>
+              <p className="text-sm text-destructive mt-2">⚠️ {locationError}</p>
             )}
             {!userPosition && isTracking && (
-              <p className="text-sm text-muted-foreground mt-2">Acquiring GPS signal...</p>
+              <p className="text-sm text-muted-foreground mt-2">📡 Acquiring GPS signal...</p>
             )}
             {userPosition && (
-              <p className="text-xs text-muted-foreground mt-1">
-                📍 {userPosition[1].toFixed(6)}, {userPosition[0].toFixed(6)}
-              </p>
+              <div className="mt-2 text-xs text-muted-foreground">
+                <div>📍 {userPosition[1].toFixed(6)}, {userPosition[0].toFixed(6)}</div>
+                {accuracy && <div>🎯 Accuracy: ±{accuracy.toFixed(0)}m</div>}
+              </div>
             )}
+            <p className="text-xs text-muted-foreground mt-2 pt-2 border-t">
+              💡 Tip: Open this on your phone's browser for best GPS accuracy
+            </p>
           </Card>
         </div>
         
