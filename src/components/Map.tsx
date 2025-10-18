@@ -15,28 +15,6 @@ const containerStyle = {
 const Map = ({ userPosition }: MapProps) => {
   const [googleMapsApiKey, setGoogleMapsApiKey] = useState('');
   const [tokenSet, setTokenSet] = useState(false);
-  const [map, setMap] = useState<google.maps.Map | null>(null);
-
-  const { isLoaded } = useJsApiLoader({
-    id: 'google-map-script',
-    googleMapsApiKey: googleMapsApiKey,
-  });
-
-  const center = userPosition ? { lat: userPosition[1], lng: userPosition[0] } : { lat: 40, lng: -74.5 };
-
-  const onLoad = useCallback((map: google.maps.Map) => {
-    setMap(map);
-  }, []);
-
-  const onUnmount = useCallback(() => {
-    setMap(null);
-  }, []);
-
-  useEffect(() => {
-    if (map && userPosition) {
-      map.panTo({ lat: userPosition[1], lng: userPosition[0] });
-    }
-  }, [userPosition, map]);
 
   if (!tokenSet) {
     return (
@@ -72,6 +50,33 @@ const Map = ({ userPosition }: MapProps) => {
       </div>
     );
   }
+
+  return <MapWithLoader apiKey={googleMapsApiKey} userPosition={userPosition} />;
+};
+
+const MapWithLoader = ({ apiKey, userPosition }: { apiKey: string; userPosition: [number, number] | null }) => {
+  const [map, setMap] = useState<google.maps.Map | null>(null);
+
+  const { isLoaded } = useJsApiLoader({
+    id: 'google-map-script',
+    googleMapsApiKey: apiKey,
+  });
+
+  const center = userPosition ? { lat: userPosition[1], lng: userPosition[0] } : { lat: 40, lng: -74.5 };
+
+  const onLoad = useCallback((map: google.maps.Map) => {
+    setMap(map);
+  }, []);
+
+  const onUnmount = useCallback(() => {
+    setMap(null);
+  }, []);
+
+  useEffect(() => {
+    if (map && userPosition) {
+      map.panTo({ lat: userPosition[1], lng: userPosition[0] });
+    }
+  }, [userPosition, map]);
 
   return (
     <div className="relative h-[calc(100vh-8rem)]">
