@@ -1,9 +1,10 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import Map from '@/components/Map';
 import SlugChaseLogic from '@/components/SlugChaseLogic';
-import { Coins, Target, Trophy } from 'lucide-react';
+import { Coins, Target, Trophy, Navigation } from 'lucide-react';
+import { Geolocation } from '@capacitor/geolocation';
 
 const Game = () => {
   const [userPosition, setUserPosition] = useState<[number, number] | null>(null);
@@ -11,40 +12,79 @@ const Game = () => {
   const [dailyDistance, setDailyDistance] = useState(0);
   const [dailyGoal] = useState(5000); // 5km daily goal
   const [locationError, setLocationError] = useState<string | null>(null);
+  const [isTracking, setIsTracking] = useState(false);
+  const watchIdRef = useRef<string | null>(null);
 
-  useEffect(() => {
-    // Get user's geolocation
-    if (navigator.geolocation) {
-      navigator.geolocation.watchPosition(
-        (position) => {
-          setUserPosition([position.coords.longitude, position.coords.latitude]);
+  // Start GPS tracking with Capacitor (better for mobile)
+  const startTracking = async () => {
+    try {
+      setLocationError(null);
+      setIsTracking(true);
+
+      // Request permissions first
+      const permission = await Geolocation.checkPermissions();
+      if (permission.location !== 'granted') {
+        const request = await Geolocation.requestPermissions();
+        if (request.location !== 'granted') {
+          setLocationError('Location permission denied');
+          setIsTracking(false);
+          return;
+        }
+      }
+
+      // Get current position first
+      const position = await Geolocation.getCurrentPosition({
+        enableHighAccuracy: true,
+        timeout: 10000,
+        maximumAge: 0
+      });
+      
+      setUserPosition([position.coords.longitude, position.coords.latitude]);
+
+      // Watch position for continuous tracking
+      watchIdRef.current = await Geolocation.watchPosition(
+        {
+          enableHighAccuracy: true,
+          timeout: 10000,
+          maximumAge: 0
         },
-        (error) => {
-          console.error('Error getting location:', error);
-          setLocationError(error.message || 'Location unavailable.');
-        },
-        { enableHighAccuracy: true }
+        (position, err) => {
+          if (err) {
+            console.error('GPS error:', err);
+            setLocationError(err.message);
+            return;
+          }
+          if (position) {
+            setUserPosition([position.coords.longitude, position.coords.latitude]);
+            setLocationError(null);
+          }
+        }
       );
+    } catch (error: any) {
+      console.error('Error starting GPS:', error);
+      setLocationError(error.message || 'Failed to start GPS tracking');
+      setIsTracking(false);
     }
-  }, []);
-
-  const requestCurrentPosition = () => {
-    if (!navigator.geolocation) {
-      setLocationError('Geolocation not supported.');
-      return;
-    }
-    navigator.geolocation.getCurrentPosition(
-      (position) => {
-        setUserPosition([position.coords.longitude, position.coords.latitude]);
-        setLocationError(null);
-      },
-      (error) => {
-        console.error('Error getting location:', error);
-        setLocationError(error.message || 'Location unavailable.');
-      },
-      { enableHighAccuracy: true, timeout: 20000, maximumAge: 10000 }
-    );
   };
+
+  // Stop tracking
+  const stopTracking = async () => {
+    if (watchIdRef.current) {
+      await Geolocation.clearWatch({ id: watchIdRef.current });
+      watchIdRef.current = null;
+    }
+    setIsTracking(false);
+  };
+
+  // Auto-start tracking on mount
+  useEffect(() => {
+    startTracking();
+    return () => {
+      if (watchIdRef.current) {
+        Geolocation.clearWatch({ id: watchIdRef.current });
+      }
+    };
+  }, []);
 
   return (
     <div className="min-h-screen bg-background">
@@ -69,17 +109,36 @@ const Game = () => {
       <div className="pt-16">
         <Map userPosition={userPosition} />
 
-        {!userPosition && (
-          <div className="p-4">
-            <Card className="p-3">
-              <p className="text-sm">Waiting for GPS... Please allow location access.</p>
-              {locationError && <p className="text-sm text-destructive mt-2">{locationError}</p>}
-              <Button onClick={requestCurrentPosition} className="mt-2" variant="outline">
-                Use my location
+        <div className="fixed top-20 left-4 right-4 z-10">
+          <Card className="p-3">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <Navigation className={`w-4 h-4 ${isTracking ? 'text-green-500 animate-pulse' : 'text-muted-foreground'}`} />
+                <span className="text-sm font-medium">
+                  {isTracking ? 'GPS Active' : 'GPS Inactive'}
+                </span>
+              </div>
+              <Button 
+                onClick={isTracking ? stopTracking : startTracking} 
+                size="sm"
+                variant={isTracking ? 'destructive' : 'default'}
+              >
+                {isTracking ? 'Stop' : 'Start GPS'}
               </Button>
-            </Card>
-          </div>
-        )}
+            </div>
+            {locationError && (
+              <p className="text-sm text-destructive mt-2">{locationError}</p>
+            )}
+            {!userPosition && isTracking && (
+              <p className="text-sm text-muted-foreground mt-2">Acquiring GPS signal...</p>
+            )}
+            {userPosition && (
+              <p className="text-xs text-muted-foreground mt-1">
+                📍 {userPosition[1].toFixed(6)}, {userPosition[0].toFixed(6)}
+              </p>
+            )}
+          </Card>
+        </div>
         
         {/* Slug Chase Logic Component */}
         <SlugChaseLogic 
