@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import {
@@ -15,6 +16,7 @@ import SlugChaseLogic from '@/components/SlugChaseLogic';
 import { Coins, Target, Trophy, Navigation } from 'lucide-react';
 
 const Game = () => {
+  const navigate = useNavigate();
   const [userPosition, setUserPosition] = useState<[number, number] | null>(null);
   const [slugPosition, setSlugPosition] = useState<[number, number] | null>(null);
   const [coins, setCoins] = useState(0);
@@ -178,8 +180,8 @@ const Game = () => {
             </div>
           </div>
           <AlertDialogFooter>
-            <AlertDialogAction onClick={() => setIsCaught(false)}>
-              Close
+            <AlertDialogAction onClick={() => navigate('/')}>
+              Main Menu
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
