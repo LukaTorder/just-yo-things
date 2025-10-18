@@ -7,6 +7,7 @@ import { Coins, Target, Trophy, Navigation } from 'lucide-react';
 
 const Game = () => {
   const [userPosition, setUserPosition] = useState<[number, number] | null>(null);
+  const [slugPosition, setSlugPosition] = useState<[number, number] | null>(null);
   const [coins, setCoins] = useState(0);
   const [dailyDistance, setDailyDistance] = useState(0);
   const [dailyGoal] = useState(5000); // 5km daily goal
@@ -92,7 +93,7 @@ const Game = () => {
           </Card>
           <Card className="flex items-center gap-2 px-3 py-2">
             <Target className="w-4 h-4 text-blue-500" />
-            <span className="text-sm">{dailyDistance}m / {dailyGoal}m</span>
+            <span className="text-sm">{(dailyDistance / 1000).toFixed(2)}km / {(dailyGoal / 1000).toFixed(0)}km</span>
           </Card>
           <Card className="flex items-center gap-2 px-3 py-2">
             <Trophy className="w-4 h-4 text-purple-500" />
@@ -102,7 +103,7 @@ const Game = () => {
 
       {/* Map with Slug */}
       <div className="pt-16">
-        <Map userPosition={userPosition} />
+        <Map userPosition={userPosition} slugPosition={slugPosition} />
 
         <div className="fixed top-20 left-4 right-4 z-10">
           <Card className="p-3">
@@ -144,6 +145,7 @@ const Game = () => {
           userPosition={userPosition}
           onCoinsEarned={(amount) => setCoins(prev => prev + amount)}
           onDistanceUpdate={(distance) => setDailyDistance(prev => prev + distance)}
+          onSlugPositionUpdate={setSlugPosition}
         />
       </div>
 

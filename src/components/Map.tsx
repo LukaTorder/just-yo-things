@@ -4,6 +4,7 @@ import { Card } from '@/components/ui/card';
 
 interface MapProps {
   userPosition: [number, number] | null;
+  slugPosition: [number, number] | null;
 }
 
 // Provide minimal typings for the global Google object to avoid TS errors
@@ -42,7 +43,7 @@ const loadGoogleMaps = (apiKey: string): Promise<void> => {
   return window._gmaps_loading_promise;
 };
 
-const Map = ({ userPosition }: MapProps) => {
+const Map = ({ userPosition, slugPosition }: MapProps) => {
   const [apiKey, setApiKey] = useState('');
   const [tokenSet, setTokenSet] = useState(false);
 
@@ -81,13 +82,14 @@ const Map = ({ userPosition }: MapProps) => {
     );
   }
 
-  return <RawGoogleMap apiKey={apiKey} userPosition={userPosition} />;
+  return <RawGoogleMap apiKey={apiKey} userPosition={userPosition} slugPosition={slugPosition} />;
 };
 
-const RawGoogleMap = ({ apiKey, userPosition }: { apiKey: string; userPosition: [number, number] | null }) => {
+const RawGoogleMap = ({ apiKey, userPosition, slugPosition }: { apiKey: string; userPosition: [number, number] | null; slugPosition: [number, number] | null }) => {
   const mapContainerRef = useRef<HTMLDivElement>(null);
   const mapRef = useRef<any>(null);
   const markerRef = useRef<any>(null);
+  const slugMarkerRef = useRef<any>(null);
   const [loaded, setLoaded] = useState(false);
 
   useEffect(() => {
@@ -127,6 +129,18 @@ const RawGoogleMap = ({ apiKey, userPosition }: { apiKey: string; userPosition: 
         strokeColor: '#ffffff',
         strokeWeight: 3,
       },
+      title: 'You',
+    });
+
+    // Slug marker
+    slugMarkerRef.current = new window.google.maps.Marker({
+      position: center,
+      map: mapRef.current,
+      label: {
+        text: '🐌',
+        fontSize: '32px',
+      },
+      title: 'Immortal Slug',
     });
   }, [loaded]);
 
@@ -136,6 +150,12 @@ const RawGoogleMap = ({ apiKey, userPosition }: { apiKey: string; userPosition: 
     markerRef.current.setPosition(pos);
     mapRef.current.panTo(pos);
   }, [userPosition, loaded]);
+
+  useEffect(() => {
+    if (!loaded || !mapRef.current || !slugMarkerRef.current || !slugPosition) return;
+    const pos = { lat: slugPosition[1], lng: slugPosition[0] };
+    slugMarkerRef.current.setPosition(pos);
+  }, [slugPosition, loaded]);
 
   return (
     <div className="relative h-[calc(100vh-8rem)]">
