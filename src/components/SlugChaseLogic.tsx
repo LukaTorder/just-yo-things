@@ -113,8 +113,6 @@ const SlugChaseLogic = ({
       if (distance < 3) {
         console.log("🐌 The slug caught you! Distance:", distance.toFixed(2), "m");
         return "💀 CAUGHT! Game Over!";
-
-        return;
       }
 
       const slugDistanceKm = (slugSpeed / 3600) * 1; // km per 1 second
@@ -134,17 +132,6 @@ const SlugChaseLogic = ({
       }
     };
   }, [slugSpeed, userPosition, slugPosition]);
-
-  // Determine status message
-  const getStatusMessage = () => {
-    if (distanceFromSlug < 3) return "💀 CAUGHT! Game Over!";
-    if (distanceFromSlug < 20) return "🚨 DANGER! Run faster!";
-    if (distanceFromSlug < 50) return "⚠️ Too close! Speed up!";
-    if (userSpeed === 0) return "🐢 Standing still - slug approaching at 5 km/h!";
-    if (userSpeed < 4) return "🐢 Too slow! Slug catching up!";
-    if (userSpeed > 10) return "🏃‍♂️ Too fast! Slug speeding up!";
-    return "✅ Perfect pace!";
-  };
 
   return (
     <div className="fixed top-20 left-4 bg-background/80 backdrop-blur-sm p-3 rounded-lg text-sm space-y-1 min-w-[200px]">
