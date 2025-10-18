@@ -17,10 +17,13 @@ const SlugChaseLogic = ({
   const [slugPosition, setSlugPosition] = useState<[number, number] | null>(null);
   const [distanceFromSlug, setDistanceFromSlug] = useState<number>(0);
   const [userSpeed, setUserSpeed] = useState<number>(0); // km/h
-  const [slugSpeed, setSlugSpeed] = useState<number>(5); // km/h (constant for demo)
+  const [slugSpeed, setSlugSpeed] = useState<number>(15); // km/h (constant for demo, clearly visible)
   const lastUserPosition = useRef<[number, number] | null>(null);
   const lastUpdateTime = useRef<number>(Date.now());
   const coinTimerRef = useRef<number>(0);
+  const slugPosRef = useRef<[number, number] | null>(null);
+  const userPosRef = useRef<[number, number] | null>(null);
+  const moveIntervalRef = useRef<number | null>(null);
 
   // Initialize slug position 200 meters away from user
   useEffect(() => {
@@ -35,7 +38,13 @@ const SlugChaseLogic = ({
       slugPoint.geometry.coordinates[1]
     ];
     setSlugPosition(initialSlugPos);
+    slugPosRef.current = initialSlugPos;
     onSlugPositionUpdate(initialSlugPos);
+  }, [userPosition]);
+
+  // Keep refs in sync
+  useEffect(() => {
+    userPosRef.current = userPosition;
   }, [userPosition]);
 
   // Calculate user speed and track movement (filter GPS drift)
@@ -87,47 +96,49 @@ const SlugChaseLogic = ({
     lastUpdateTime.current = now;
   }, [userPosition]);
 
-  // For demo: use constant slug speed regardless of user speed
-  useEffect(() => {
-    setSlugSpeed(5);
-  }, [userSpeed]);
 
-  // Move slug toward user based on calculated speed
+  // Move slug toward user (ref-driven, independent of state re-renders)
   useEffect(() => {
-    if (!userPosition || !slugPosition) return;
+    if (!userPosRef.current || !slugPosRef.current) return;
 
-    const interval = setInterval(() => {
-      const from = turf.point([slugPosition[0], slugPosition[1]]);
-      const to = turf.point([userPosition[0], userPosition[1]]);
+    if (moveIntervalRef.current) {
+      clearInterval(moveIntervalRef.current);
+      moveIntervalRef.current = null;
+    }
+
+    moveIntervalRef.current = window.setInterval(() => {
+      if (!userPosRef.current || !slugPosRef.current) return;
+
+      const from = turf.point([slugPosRef.current[0], slugPosRef.current[1]]);
+      const to = turf.point([userPosRef.current[0], userPosRef.current[1]]);
       const distance = turf.distance(from, to, { units: 'meters' });
-      
       setDistanceFromSlug(distance);
 
-      // Don't move slug if already caught user
       if (distance < 3) {
         console.log('🐌 The slug caught you! Distance:', distance.toFixed(2), 'm');
         return;
       }
 
-      // Calculate how far slug moves in 1 second at current slug speed
       const slugDistanceKm = (slugSpeed / 3600) * 1; // km per 1 second
-      
-      console.log(`🐌 Moving slug: ${slugSpeed.toFixed(1)} km/h = ${(slugDistanceKm * 1000).toFixed(2)}m per sec`);
-      
-      // Calculate direction and move slug toward user
       const bearing = turf.bearing(from, to);
-      const newSlugPoint = turf.destination(from, slugDistanceKm, bearing, { units: 'kilometers' });
-      const newSlugPos: [number, number] = [
-        newSlugPoint.geometry.coordinates[0],
-        newSlugPoint.geometry.coordinates[1]
+      const newPoint = turf.destination(from, slugDistanceKm, bearing, { units: 'kilometers' });
+      const newPos: [number, number] = [
+        newPoint.geometry.coordinates[0],
+        newPoint.geometry.coordinates[1]
       ];
-      
-      setSlugPosition(newSlugPos);
-      onSlugPositionUpdate(newSlugPos);
-    }, 1000); // Update every 1 second
 
-    return () => clearInterval(interval);
-  }, [userPosition, slugPosition, slugSpeed]);
+      slugPosRef.current = newPos;
+      setSlugPosition(newPos);
+      onSlugPositionUpdate(newPos);
+    }, 1000);
+
+    return () => {
+      if (moveIntervalRef.current) {
+        clearInterval(moveIntervalRef.current);
+        moveIntervalRef.current = null;
+      }
+    };
+  }, [slugSpeed, userPosition, slugPosition]);
 
   // Determine status message
   const getStatusMessage = () => {
