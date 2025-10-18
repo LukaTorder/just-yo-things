@@ -38,7 +38,7 @@ const SlugChaseLogic = ({
     onSlugPositionUpdate(initialSlugPos);
   }, [userPosition]);
 
-  // Calculate user speed and track movement
+  // Calculate user speed and track movement (filter GPS drift)
   useEffect(() => {
     if (!userPosition) {
       lastUserPosition.current = userPosition;
@@ -55,26 +55,32 @@ const SlugChaseLogic = ({
     const now = Date.now();
     const timeDiff = (now - lastUpdateTime.current) / 1000; // seconds
 
-    if (timeDiff < 1) return; // Update at most once per second
+    if (timeDiff < 2) return; // Update every 2 seconds
 
     const from = turf.point([lastUserPosition.current[0], lastUserPosition.current[1]]);
     const to = turf.point([userPosition[0], userPosition[1]]);
-    const distanceMoved = turf.distance(from, to, { units: 'kilometers' });
+    const distanceMovedKm = turf.distance(from, to, { units: 'kilometers' });
+    const distanceMovedM = distanceMovedKm * 1000;
+
+    // Filter GPS drift - only count movement > 5 meters
+    if (distanceMovedM < 5) {
+      setUserSpeed(0); // Consider as stationary
+      lastUpdateTime.current = now;
+      return;
+    }
 
     // Calculate speed in km/h
-    const speed = (distanceMoved / timeDiff) * 3600;
+    const speed = (distanceMovedKm / timeDiff) * 3600;
     setUserSpeed(speed);
 
     // Award coins for movement (1 coin per 10 meters)
-    if (distanceMoved > 0.001) { // Only if moved more than 1 meter
-      onDistanceUpdate(distanceMoved * 1000);
-      
-      coinTimerRef.current += distanceMoved * 1000;
-      if (coinTimerRef.current >= 10) {
-        const coinsToAward = Math.floor(coinTimerRef.current / 10);
-        onCoinsEarned(coinsToAward);
-        coinTimerRef.current = coinTimerRef.current % 10;
-      }
+    onDistanceUpdate(distanceMovedM);
+    
+    coinTimerRef.current += distanceMovedM;
+    if (coinTimerRef.current >= 10) {
+      const coinsToAward = Math.floor(coinTimerRef.current / 10);
+      onCoinsEarned(coinsToAward);
+      coinTimerRef.current = coinTimerRef.current % 10;
     }
 
     lastUserPosition.current = userPosition;
@@ -115,8 +121,16 @@ const SlugChaseLogic = ({
       
       setDistanceFromSlug(distance);
 
-      // Calculate how far slug moves in 2 seconds
+      // Don't move slug if already caught user
+      if (distance < 3) {
+        console.log('🐌 The slug caught you! Distance:', distance.toFixed(2), 'm');
+        return;
+      }
+
+      // Calculate how far slug moves in 2 seconds at current slug speed
       const slugDistanceKm = (slugSpeed / 3600) * 2; // km per 2 seconds
+      
+      console.log(`🐌 Moving slug: ${slugSpeed.toFixed(1)} km/h = ${(slugDistanceKm * 1000).toFixed(2)}m per 2sec`);
       
       // Calculate direction and move slug toward user
       const bearing = turf.bearing(from, to);
@@ -128,11 +142,6 @@ const SlugChaseLogic = ({
       
       setSlugPosition(newSlugPos);
       onSlugPositionUpdate(newSlugPos);
-
-      // Game over if slug catches you (within 3 meters)
-      if (distance < 3) {
-        console.log('🐌 The slug caught you!');
-      }
     }, 2000); // Update every 2 seconds
 
     return () => clearInterval(interval);
@@ -140,9 +149,11 @@ const SlugChaseLogic = ({
 
   // Determine status message
   const getStatusMessage = () => {
+    if (distanceFromSlug < 3) return '💀 CAUGHT! Game Over!';
     if (distanceFromSlug < 20) return '🚨 DANGER! Run faster!';
     if (distanceFromSlug < 50) return '⚠️ Too close! Speed up!';
-    if (userSpeed < 4) return '🐢 Move faster or slug catches up!';
+    if (userSpeed === 0) return '🐢 Standing still - slug approaching at 4.5 km/h!';
+    if (userSpeed < 4) return '🐢 Too slow! Slug catching up!';
     if (userSpeed > 10) return '🏃‍♂️ Too fast! Slug speeding up!';
     return '✅ Perfect pace!';
   };
