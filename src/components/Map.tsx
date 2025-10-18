@@ -1,6 +1,5 @@
-import { useEffect, useRef, useState } from 'react';
-import mapboxgl from 'mapbox-gl';
-import 'mapbox-gl/dist/mapbox-gl.css';
+import { useState, useEffect, useCallback } from 'react';
+import { GoogleMap, useJsApiLoader, Marker } from '@react-google-maps/api';
 import { Input } from '@/components/ui/input';
 import { Card } from '@/components/ui/card';
 
@@ -8,79 +7,63 @@ interface MapProps {
   userPosition: [number, number] | null;
 }
 
+const containerStyle = {
+  width: '100%',
+  height: '100%'
+};
+
 const Map = ({ userPosition }: MapProps) => {
-  const mapContainer = useRef<HTMLDivElement>(null);
-  const map = useRef<mapboxgl.Map | null>(null);
-  const userMarker = useRef<mapboxgl.Marker | null>(null);
-  const [mapboxToken, setMapboxToken] = useState('');
+  const [googleMapsApiKey, setGoogleMapsApiKey] = useState('');
   const [tokenSet, setTokenSet] = useState(false);
+  const [map, setMap] = useState<google.maps.Map | null>(null);
+
+  const { isLoaded } = useJsApiLoader({
+    id: 'google-map-script',
+    googleMapsApiKey: googleMapsApiKey,
+  });
+
+  const center = userPosition ? { lat: userPosition[1], lng: userPosition[0] } : { lat: 40, lng: -74.5 };
+
+  const onLoad = useCallback((map: google.maps.Map) => {
+    setMap(map);
+  }, []);
+
+  const onUnmount = useCallback(() => {
+    setMap(null);
+  }, []);
 
   useEffect(() => {
-    if (!mapContainer.current || !tokenSet) return;
-
-    mapboxgl.accessToken = mapboxToken;
-    
-    map.current = new mapboxgl.Map({
-      container: mapContainer.current,
-      style: 'mapbox://styles/mapbox/streets-v12',
-      center: userPosition || [-74.5, 40],
-      zoom: 15,
-    });
-
-    map.current.addControl(new mapboxgl.NavigationControl(), 'top-right');
-
-    // Add user marker
-    const el = document.createElement('div');
-    el.className = 'user-marker';
-    el.style.width = '20px';
-    el.style.height = '20px';
-    el.style.borderRadius = '50%';
-    el.style.backgroundColor = '#3b82f6';
-    el.style.border = '3px solid white';
-    el.style.boxShadow = '0 0 10px rgba(59, 130, 246, 0.5)';
-
-    userMarker.current = new mapboxgl.Marker(el)
-      .setLngLat(userPosition || [-74.5, 40])
-      .addTo(map.current);
-
-    return () => {
-      map.current?.remove();
-    };
-  }, [tokenSet, mapboxToken]);
-
-  useEffect(() => {
-    if (userPosition && map.current && userMarker.current) {
-      userMarker.current.setLngLat(userPosition);
-      map.current.setCenter(userPosition);
+    if (map && userPosition) {
+      map.panTo({ lat: userPosition[1], lng: userPosition[0] });
     }
-  }, [userPosition]);
+  }, [userPosition, map]);
 
   if (!tokenSet) {
     return (
       <div className="h-[calc(100vh-8rem)] flex items-center justify-center p-4">
         <Card className="p-6 max-w-md w-full">
-          <h2 className="text-xl font-bold mb-4">Enter Mapbox Token</h2>
+          <h2 className="text-xl font-bold mb-4">Enter Google Maps API Key</h2>
           <p className="text-sm text-muted-foreground mb-4">
-            Get your public token from{' '}
+            Get your API key from{' '}
             <a 
-              href="https://mapbox.com/" 
+              href="https://console.cloud.google.com/google/maps-apis" 
               target="_blank" 
               rel="noopener noreferrer"
               className="text-primary underline"
             >
-              mapbox.com
+              Google Cloud Console
             </a>
           </p>
           <Input
             type="text"
-            placeholder="pk.ey..."
-            value={mapboxToken}
-            onChange={(e) => setMapboxToken(e.target.value)}
+            placeholder="AIza..."
+            value={googleMapsApiKey}
+            onChange={(e) => setGoogleMapsApiKey(e.target.value)}
             className="mb-4"
           />
           <button
             onClick={() => setTokenSet(true)}
-            disabled={!mapboxToken}
+            disabled={!googleMapsApiKey}
             className="w-full bg-primary text-primary-foreground px-4 py-2 rounded-md disabled:opacity-50"
           >
             Start Game
@@ -92,7 +75,39 @@ const Map = ({ userPosition }: MapProps) => {
 
   return (
     <div className="relative h-[calc(100vh-8rem)]">
-      <div ref={mapContainer} className="absolute inset-0" />
+      {isLoaded ? (
+        <GoogleMap
+          mapContainerStyle={containerStyle}
+          center={center}
+          zoom={15}
+          onLoad={onLoad}
+          onUnmount={onUnmount}
+          options={{
+            zoomControl: true,
+            streetViewControl: false,
+            mapTypeControl: false,
+            fullscreenControl: false,
+          }}
+        >
+          {userPosition && (
+            <Marker
+              position={{ lat: userPosition[1], lng: userPosition[0] }}
+              icon={{
+                path: google.maps.SymbolPath.CIRCLE,
+                scale: 10,
+                fillColor: '#3b82f6',
+                fillOpacity: 1,
+                strokeColor: '#ffffff',
+                strokeWeight: 3,
+              }}
+            />
+          )}
+        </GoogleMap>
+      ) : (
+        <div className="flex items-center justify-center h-full">
+          <p>Loading map...</p>
+        </div>
+      )}
     </div>
   );
 };

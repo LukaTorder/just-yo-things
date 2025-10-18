@@ -14,11 +14,12 @@ A GPS-based fitness game where an immortal slug chases you based on your real-wo
    const APP_ID = 'your-app-id-here';
    ```
 
-### 2. Mapbox Setup
-1. Go to [https://mapbox.com/](https://mapbox.com/)
-2. Create an account (free tier available)
-3. Get your public access token
-4. The app will prompt you to enter it on first run
+### 2. Google Maps Setup
+1. Go to [Google Cloud Console](https://console.cloud.google.com/google/maps-apis)
+2. Create a new project or select an existing one
+3. Enable the **Maps JavaScript API** for your project
+4. Create an API key in the Credentials section
+5. The app will prompt you to enter it on first run
 
 ### 3. Define Your Data Schema in Instant DB Dashboard
 Create these collections in your Instant DB dashboard:
@@ -48,7 +49,7 @@ Create these collections in your Instant DB dashboard:
 ```
 src/
 ├── components/
-│   ├── Map.tsx                    # Mapbox map integration
+│   ├── Map.tsx                    # Google Maps integration
 │   ├── SlugChaseLogic.tsx         # 🔥 YOUR CHASE LOGIC GOES HERE
 │   └── ui/                        # UI components
 ├── pages/
@@ -94,13 +95,13 @@ Open `src/components/SlugChaseLogic.tsx` and implement your algorithm:
 
 1. Run the app: It's already running in your Lovable preview
 2. Allow location access when prompted
-3. Enter your Mapbox token
+3. Enter your Google Maps API key
 4. Start implementing your chase logic!
 
 ## 🎨 Features
 
 - **Real-time GPS tracking**
-- **Mapbox map integration**
+- **Google Maps integration**
 - **Coin & reward system**
 - **Slug skin shop**
 - **Daily fitness goals**
@@ -110,6 +111,6 @@ Open `src/components/SlugChaseLogic.tsx` and implement your algorithm:
 ## 🐛 Need Help?
 
 - Make sure location permissions are enabled
-- Mapbox token must start with `pk.`
+- Google Maps API key must start with `AIza`
 - Instant DB App ID format: UUID string
 - Check browser console for any errors
