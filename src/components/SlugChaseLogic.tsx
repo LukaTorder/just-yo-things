@@ -15,6 +15,7 @@ interface SlugChaseLogicProps {
   onCoinsEarned: (amount: number) => void;
   onDistanceUpdate: (distance: number) => void;
   onSlugPositionUpdate: (position: [number, number]) => void;
+  onCaught: () => void;
 }
 
 const SlugChaseLogic = ({
@@ -22,6 +23,7 @@ const SlugChaseLogic = ({
   onCoinsEarned,
   onDistanceUpdate,
   onSlugPositionUpdate,
+  onCaught,
 }: SlugChaseLogicProps) => {
   const [slugPosition, setSlugPosition] = useState<[number, number] | null>(null);
   const [distanceFromSlug, setDistanceFromSlug] = useState<number>(0);
@@ -126,6 +128,7 @@ const SlugChaseLogic = ({
           clearInterval(moveIntervalRef.current);
           moveIntervalRef.current = null;
         }
+        onCaught();
         return;
       }
 
@@ -164,21 +167,6 @@ const SlugChaseLogic = ({
         <div className="text-xs text-muted-foreground pt-1 border-t">{getStatusMessage()}</div>
       </div>
 
-      <AlertDialog open={isCaught} onOpenChange={setIsCaught}>
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>🐌 The Slug Caught You!</AlertDialogTitle>
-            <AlertDialogDescription>
-              Game Over! The immortal slug has caught up with you at {distanceFromSlug.toFixed(2)}m. Better luck next time!
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogAction onClick={() => window.location.reload()}>
-              Try Again
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
     </>
   );
 };

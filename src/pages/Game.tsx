@@ -1,6 +1,15 @@
 import { useState, useEffect, useRef } from 'react';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from '@/components/ui/alert-dialog';
 import Map from '@/components/Map';
 import SlugChaseLogic from '@/components/SlugChaseLogic';
 import { Coins, Target, Trophy, Navigation } from 'lucide-react';
@@ -15,6 +24,9 @@ const Game = () => {
   const [isTracking, setIsTracking] = useState(false);
   const [accuracy, setAccuracy] = useState<number | null>(null);
   const watchIdRef = useRef<number | null>(null);
+  const [isCaught, setIsCaught] = useState(false);
+  const [finalCoins, setFinalCoins] = useState(0);
+  const [finalDistance, setFinalDistance] = useState(0);
 
   // Start GPS tracking (works on phone browsers!)
   const startTracking = () => {
@@ -82,6 +94,20 @@ const Game = () => {
     };
   }, []);
 
+  const handleCaught = () => {
+    setFinalCoins(coins);
+    setFinalDistance(dailyDistance);
+    setIsCaught(true);
+  };
+
+  const handleTryAgain = () => {
+    setCoins(0);
+    setDailyDistance(0);
+    setIsCaught(false);
+    setSlugPosition(null);
+    window.location.reload();
+  };
+
   return (
     <div className="min-h-screen bg-background">
       {/* Stats Header */}
@@ -123,6 +149,7 @@ const Game = () => {
           onCoinsEarned={(amount) => setCoins(prev => prev + amount)}
           onDistanceUpdate={(distance) => setDailyDistance(prev => prev + distance)}
           onSlugPositionUpdate={setSlugPosition}
+          onCaught={handleCaught}
         />
       </div>
 
@@ -132,6 +159,39 @@ const Game = () => {
           <div className="text-sm text-muted-foreground">🐌 Keep running to stay ahead of the slug!</div>
         </div>
       </div>
+
+      {/* Game Over Dialog */}
+      <AlertDialog open={isCaught} onOpenChange={setIsCaught}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>🐌 The Slug Caught You!</AlertDialogTitle>
+            <AlertDialogDescription>
+              Game Over! The immortal slug has caught up with you.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <div className="space-y-3 py-4">
+            <div className="flex items-center justify-between p-3 bg-muted rounded-lg">
+              <span className="flex items-center gap-2">
+                <Coins className="w-5 h-5 text-yellow-500" />
+                <span className="font-medium">Coins Earned</span>
+              </span>
+              <span className="text-xl font-bold">{finalCoins}</span>
+            </div>
+            <div className="flex items-center justify-between p-3 bg-muted rounded-lg">
+              <span className="flex items-center gap-2">
+                <Target className="w-5 h-5 text-blue-500" />
+                <span className="font-medium">Distance Traveled</span>
+              </span>
+              <span className="text-xl font-bold">{(finalDistance / 1000).toFixed(2)} km</span>
+            </div>
+          </div>
+          <AlertDialogFooter>
+            <AlertDialogAction onClick={handleTryAgain}>
+              Try Again
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 };
