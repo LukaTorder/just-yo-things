@@ -100,14 +100,6 @@ const Game = () => {
     setIsCaught(true);
   };
 
-  const handleTryAgain = () => {
-    setCoins(0);
-    setDailyDistance(0);
-    setIsCaught(false);
-    setSlugPosition(null);
-    window.location.reload();
-  };
-
   return (
     <div className="min-h-screen bg-background">
       {/* Stats Header */}
@@ -186,8 +178,8 @@ const Game = () => {
             </div>
           </div>
           <AlertDialogFooter>
-            <AlertDialogAction onClick={handleTryAgain}>
-              Try Again
+            <AlertDialogAction onClick={() => setIsCaught(false)}>
+              Close
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
