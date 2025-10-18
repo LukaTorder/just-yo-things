@@ -1,5 +1,4 @@
-import { useState, useEffect, useCallback } from 'react';
-import { GoogleMap, useJsApiLoader, Marker } from '@react-google-maps/api';
+import { useEffect, useRef, useState } from 'react';
 import { Input } from '@/components/ui/input';
 import { Card } from '@/components/ui/card';
 
@@ -7,13 +6,44 @@ interface MapProps {
   userPosition: [number, number] | null;
 }
 
-const containerStyle = {
-  width: '100%',
-  height: '100%'
+// Provide minimal typings for the global Google object to avoid TS errors
+declare global {
+  interface Window {
+    google?: any;
+    _gmaps_loading_promise?: Promise<void>;
+  }
+}
+
+// Load Google Maps script once with the provided API key without using the library loader
+const loadGoogleMaps = (apiKey: string): Promise<void> => {
+  if (window.google?.maps) return Promise.resolve();
+  if (window._gmaps_loading_promise) return window._gmaps_loading_promise;
+
+  window._gmaps_loading_promise = new Promise((resolve, reject) => {
+    const existing = document.getElementById('gmaps-script') as HTMLScriptElement | null;
+
+    if (existing) {
+      if (window.google?.maps) return resolve();
+      existing.addEventListener('load', () => resolve());
+      existing.addEventListener('error', () => reject(new Error('Google Maps failed to load')));
+      return;
+    }
+
+    const script = document.createElement('script');
+    script.id = 'gmaps-script';
+    script.src = `https://maps.googleapis.com/maps/api/js?key=${apiKey}&libraries=maps&v=weekly`;
+    script.async = true;
+    script.defer = true;
+    script.onload = () => resolve();
+    script.onerror = () => reject(new Error('Google Maps failed to load'));
+    document.head.appendChild(script);
+  });
+
+  return window._gmaps_loading_promise;
 };
 
 const Map = ({ userPosition }: MapProps) => {
-  const [googleMapsApiKey, setGoogleMapsApiKey] = useState('');
+  const [apiKey, setApiKey] = useState('');
   const [tokenSet, setTokenSet] = useState(false);
 
   if (!tokenSet) {
@@ -23,9 +53,9 @@ const Map = ({ userPosition }: MapProps) => {
           <h2 className="text-xl font-bold mb-4">Enter Google Maps API Key</h2>
           <p className="text-sm text-muted-foreground mb-4">
             Get your API key from{' '}
-            <a 
-              href="https://console.cloud.google.com/google/maps-apis" 
-              target="_blank" 
+            <a
+              href="https://console.cloud.google.com/google/maps-apis"
+              target="_blank"
               rel="noopener noreferrer"
               className="text-primary underline"
             >
@@ -35,13 +65,13 @@ const Map = ({ userPosition }: MapProps) => {
           <Input
             type="text"
             placeholder="AIza..."
-            value={googleMapsApiKey}
-            onChange={(e) => setGoogleMapsApiKey(e.target.value)}
+            value={apiKey}
+            onChange={(e) => setApiKey(e.target.value)}
             className="mb-4"
           />
           <button
             onClick={() => setTokenSet(true)}
-            disabled={!googleMapsApiKey}
+            disabled={!apiKey}
             className="w-full bg-primary text-primary-foreground px-4 py-2 rounded-md disabled:opacity-50"
           >
             Start Game
@@ -51,68 +81,65 @@ const Map = ({ userPosition }: MapProps) => {
     );
   }
 
-  return <MapWithLoader apiKey={googleMapsApiKey} userPosition={userPosition} />;
+  return <RawGoogleMap apiKey={apiKey} userPosition={userPosition} />;
 };
 
-const MapWithLoader = ({ apiKey, userPosition }: { apiKey: string; userPosition: [number, number] | null }) => {
-  const [map, setMap] = useState<google.maps.Map | null>(null);
-
-  const { isLoaded } = useJsApiLoader({
-    id: 'google-map-script',
-    googleMapsApiKey: apiKey,
-  });
-
-  const center = userPosition ? { lat: userPosition[1], lng: userPosition[0] } : { lat: 40, lng: -74.5 };
-
-  const onLoad = useCallback((map: google.maps.Map) => {
-    setMap(map);
-  }, []);
-
-  const onUnmount = useCallback(() => {
-    setMap(null);
-  }, []);
+const RawGoogleMap = ({ apiKey, userPosition }: { apiKey: string; userPosition: [number, number] | null }) => {
+  const mapContainerRef = useRef<HTMLDivElement>(null);
+  const mapRef = useRef<any>(null);
+  const markerRef = useRef<any>(null);
+  const [loaded, setLoaded] = useState(false);
 
   useEffect(() => {
-    if (map && userPosition) {
-      map.panTo({ lat: userPosition[1], lng: userPosition[0] });
-    }
-  }, [userPosition, map]);
+    let cancelled = false;
+    loadGoogleMaps(apiKey)
+      .then(() => {
+        if (!cancelled) setLoaded(true);
+      })
+      .catch((e) => {
+        console.error('Failed to load Google Maps', e);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [apiKey]);
+
+  useEffect(() => {
+    if (!loaded || !mapContainerRef.current || mapRef.current) return;
+    const center = userPosition ? { lat: userPosition[1], lng: userPosition[0] } : { lat: 40, lng: -74.5 };
+    mapRef.current = new window.google.maps.Map(mapContainerRef.current, {
+      center,
+      zoom: 15,
+      mapTypeControl: false,
+      streetViewControl: false,
+      fullscreenControl: false,
+    });
+
+    // User marker
+    markerRef.current = new window.google.maps.Marker({
+      position: center,
+      map: mapRef.current,
+      icon: {
+        path: window.google.maps.SymbolPath.CIRCLE,
+        scale: 10,
+        fillColor: '#3b82f6',
+        fillOpacity: 1,
+        strokeColor: '#ffffff',
+        strokeWeight: 3,
+      },
+    });
+  }, [loaded]);
+
+  useEffect(() => {
+    if (!loaded || !mapRef.current || !markerRef.current || !userPosition) return;
+    const pos = { lat: userPosition[1], lng: userPosition[0] };
+    markerRef.current.setPosition(pos);
+    mapRef.current.panTo(pos);
+  }, [userPosition, loaded]);
 
   return (
     <div className="relative h-[calc(100vh-8rem)]">
-      {isLoaded ? (
-        <GoogleMap
-          mapContainerStyle={containerStyle}
-          center={center}
-          zoom={15}
-          onLoad={onLoad}
-          onUnmount={onUnmount}
-          options={{
-            zoomControl: true,
-            streetViewControl: false,
-            mapTypeControl: false,
-            fullscreenControl: false,
-          }}
-        >
-          {userPosition && (
-            <Marker
-              position={{ lat: userPosition[1], lng: userPosition[0] }}
-              icon={{
-                path: google.maps.SymbolPath.CIRCLE,
-                scale: 10,
-                fillColor: '#3b82f6',
-                fillOpacity: 1,
-                strokeColor: '#ffffff',
-                strokeWeight: 3,
-              }}
-            />
-          )}
-        </GoogleMap>
-      ) : (
-        <div className="flex items-center justify-center h-full">
-          <p>Loading map...</p>
-        </div>
-      )}
+      <div ref={mapContainerRef} className="absolute inset-0" />
     </div>
   );
 };
