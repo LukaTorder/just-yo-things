@@ -10,6 +10,7 @@ const Game = () => {
   const [coins, setCoins] = useState(0);
   const [dailyDistance, setDailyDistance] = useState(0);
   const [dailyGoal] = useState(5000); // 5km daily goal
+  const [locationError, setLocationError] = useState<string | null>(null);
 
   useEffect(() => {
     // Get user's geolocation
@@ -20,11 +21,30 @@ const Game = () => {
         },
         (error) => {
           console.error('Error getting location:', error);
+          setLocationError(error.message || 'Location unavailable.');
         },
         { enableHighAccuracy: true }
       );
     }
   }, []);
+
+  const requestCurrentPosition = () => {
+    if (!navigator.geolocation) {
+      setLocationError('Geolocation not supported.');
+      return;
+    }
+    navigator.geolocation.getCurrentPosition(
+      (position) => {
+        setUserPosition([position.coords.longitude, position.coords.latitude]);
+        setLocationError(null);
+      },
+      (error) => {
+        console.error('Error getting location:', error);
+        setLocationError(error.message || 'Location unavailable.');
+      },
+      { enableHighAccuracy: true, timeout: 20000, maximumAge: 10000 }
+    );
+  };
 
   return (
     <div className="min-h-screen bg-background">
@@ -48,6 +68,18 @@ const Game = () => {
       {/* Map with Slug */}
       <div className="pt-16">
         <Map userPosition={userPosition} />
+
+        {!userPosition && (
+          <div className="p-4">
+            <Card className="p-3">
+              <p className="text-sm">Waiting for GPS... Please allow location access.</p>
+              {locationError && <p className="text-sm text-destructive mt-2">{locationError}</p>}
+              <Button onClick={requestCurrentPosition} className="mt-2" variant="outline">
+                Use my location
+              </Button>
+            </Card>
+          </div>
+        )}
         
         {/* Slug Chase Logic Component */}
         <SlugChaseLogic 
