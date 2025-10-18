@@ -1,5 +1,14 @@
 import { useEffect, useState, useRef } from "react";
 import * as turf from "@turf/turf";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 
 interface SlugChaseLogicProps {
   userPosition: [number, number] | null;
@@ -24,6 +33,7 @@ const SlugChaseLogic = ({
   const slugPosRef = useRef<[number, number] | null>(null);
   const userPosRef = useRef<[number, number] | null>(null);
   const moveIntervalRef = useRef<number | null>(null);
+  const [isCaught, setIsCaught] = useState(false);
 
   // Initialize slug position 200 meters away from user
   useEffect(() => {
@@ -110,9 +120,13 @@ const SlugChaseLogic = ({
       const distance = turf.distance(from, to, { units: "meters" });
       setDistanceFromSlug(distance);
 
-      if (distance < 3) {
-        console.log("🐌 The slug caught you! Distance:", distance.toFixed(2), "m");
-        return "💀 CAUGHT! Game Over!";
+      if (distance < 3 && !isCaught) {
+        setIsCaught(true);
+        if (moveIntervalRef.current) {
+          clearInterval(moveIntervalRef.current);
+          moveIntervalRef.current = null;
+        }
+        return;
       }
 
       const slugDistanceKm = (slugSpeed / 3600) * 1; // km per 1 second
@@ -133,14 +147,39 @@ const SlugChaseLogic = ({
     };
   }, [slugSpeed, userPosition, slugPosition]);
 
+  const getStatusMessage = () => {
+    if (distanceFromSlug < 10) return "⚠️ DANGER! Slug is very close!";
+    if (distanceFromSlug < 30) return "⚡ Run! Slug is catching up!";
+    if (userSpeed > slugSpeed) return "✅ You're outrunning the slug!";
+    return "🏃 Keep moving!";
+  };
+
   return (
-    <div className="fixed top-20 left-4 bg-background/80 backdrop-blur-sm p-3 rounded-lg text-sm space-y-1 min-w-[200px]">
-      <div className="font-semibold">🐌 Slug Chase</div>
-      <div>Distance: {distanceFromSlug.toFixed(1)}m</div>
-      <div>Your Speed: {userSpeed.toFixed(1)} km/h</div>
-      <div>Slug Speed: {slugSpeed.toFixed(1)} km/h</div>
-      <div className="text-xs text-muted-foreground pt-1 border-t">{getStatusMessage()}</div>
-    </div>
+    <>
+      <div className="fixed top-20 left-4 bg-background/80 backdrop-blur-sm p-3 rounded-lg text-sm space-y-1 min-w-[200px]">
+        <div className="font-semibold">🐌 Slug Chase</div>
+        <div>Distance: {distanceFromSlug.toFixed(1)}m</div>
+        <div>Your Speed: {userSpeed.toFixed(1)} km/h</div>
+        <div>Slug Speed: {slugSpeed.toFixed(1)} km/h</div>
+        <div className="text-xs text-muted-foreground pt-1 border-t">{getStatusMessage()}</div>
+      </div>
+
+      <AlertDialog open={isCaught} onOpenChange={setIsCaught}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>🐌 The Slug Caught You!</AlertDialogTitle>
+            <AlertDialogDescription>
+              Game Over! The immortal slug has caught up with you at {distanceFromSlug.toFixed(2)}m. Better luck next time!
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogAction onClick={() => window.location.reload()}>
+              Try Again
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+    </>
   );
 };
 

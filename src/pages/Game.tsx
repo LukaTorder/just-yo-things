@@ -151,10 +151,8 @@ const Game = () => {
 
       {/* Bottom Controls */}
       <div className="fixed bottom-0 left-0 right-0 bg-background/95 backdrop-blur-sm border-t p-4">
-        <div className="container flex gap-2">
-          <Button className="flex-1" variant="outline">Profile</Button>
-          <Button className="flex-1" variant="outline">Skins</Button>
-          <Button className="flex-1" variant="outline">Stats</Button>
+        <div className="container flex justify-center">
+          <div className="text-sm text-muted-foreground">🐌 Keep running to stay ahead of the slug!</div>
         </div>
       </div>
     </div>
