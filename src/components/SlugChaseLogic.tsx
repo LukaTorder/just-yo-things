@@ -1,5 +1,5 @@
-import { useEffect, useState, useRef } from 'react';
-import * as turf from '@turf/turf';
+import { useEffect, useState, useRef } from "react";
+import * as turf from "@turf/turf";
 
 interface SlugChaseLogicProps {
   userPosition: [number, number] | null;
@@ -8,11 +8,11 @@ interface SlugChaseLogicProps {
   onSlugPositionUpdate: (position: [number, number]) => void;
 }
 
-const SlugChaseLogic = ({ 
-  userPosition, 
-  onCoinsEarned, 
+const SlugChaseLogic = ({
+  userPosition,
+  onCoinsEarned,
   onDistanceUpdate,
-  onSlugPositionUpdate 
+  onSlugPositionUpdate,
 }: SlugChaseLogicProps) => {
   const [slugPosition, setSlugPosition] = useState<[number, number] | null>(null);
   const [distanceFromSlug, setDistanceFromSlug] = useState<number>(0);
@@ -28,15 +28,12 @@ const SlugChaseLogic = ({
   // Initialize slug position 200 meters away from user
   useEffect(() => {
     if (!userPosition || slugPosition) return;
-    
+
     // Spawn slug 200m away (roughly south-west)
     const from = turf.point([userPosition[0], userPosition[1]]);
     const bearing = 225; // South-west direction
-    const slugPoint = turf.destination(from, 0.5, bearing, { units: 'kilometers' });
-    const initialSlugPos: [number, number] = [
-      slugPoint.geometry.coordinates[0],
-      slugPoint.geometry.coordinates[1]
-    ];
+    const slugPoint = turf.destination(from, 0.5, bearing, { units: "kilometers" });
+    const initialSlugPos: [number, number] = [slugPoint.geometry.coordinates[0], slugPoint.geometry.coordinates[1]];
     setSlugPosition(initialSlugPos);
     slugPosRef.current = initialSlugPos;
     onSlugPositionUpdate(initialSlugPos);
@@ -68,7 +65,7 @@ const SlugChaseLogic = ({
 
     const from = turf.point([lastUserPosition.current[0], lastUserPosition.current[1]]);
     const to = turf.point([userPosition[0], userPosition[1]]);
-    const distanceMovedKm = turf.distance(from, to, { units: 'kilometers' });
+    const distanceMovedKm = turf.distance(from, to, { units: "kilometers" });
     const distanceMovedM = distanceMovedKm * 1000;
 
     // Filter GPS drift - only count movement > 5 meters
@@ -84,7 +81,7 @@ const SlugChaseLogic = ({
 
     // Award coins for movement (1 coin per 10 meters)
     onDistanceUpdate(distanceMovedM);
-    
+
     coinTimerRef.current += distanceMovedM;
     if (coinTimerRef.current >= 10) {
       const coinsToAward = Math.floor(coinTimerRef.current / 10);
@@ -95,7 +92,6 @@ const SlugChaseLogic = ({
     lastUserPosition.current = userPosition;
     lastUpdateTime.current = now;
   }, [userPosition]);
-
 
   // Move slug toward user (ref-driven, independent of state re-renders)
   useEffect(() => {
@@ -111,21 +107,20 @@ const SlugChaseLogic = ({
 
       const from = turf.point([slugPosRef.current[0], slugPosRef.current[1]]);
       const to = turf.point([userPosRef.current[0], userPosRef.current[1]]);
-      const distance = turf.distance(from, to, { units: 'meters' });
+      const distance = turf.distance(from, to, { units: "meters" });
       setDistanceFromSlug(distance);
 
       if (distance < 3) {
-        console.log('🐌 The slug caught you! Distance:', distance.toFixed(2), 'm');
+        console.log("🐌 The slug caught you! Distance:", distance.toFixed(2), "m");
+        return "💀 CAUGHT! Game Over!";
+
         return;
       }
 
       const slugDistanceKm = (slugSpeed / 3600) * 1; // km per 1 second
       const bearing = turf.bearing(from, to);
-      const newPoint = turf.destination(from, slugDistanceKm, bearing, { units: 'kilometers' });
-      const newPos: [number, number] = [
-        newPoint.geometry.coordinates[0],
-        newPoint.geometry.coordinates[1]
-      ];
+      const newPoint = turf.destination(from, slugDistanceKm, bearing, { units: "kilometers" });
+      const newPos: [number, number] = [newPoint.geometry.coordinates[0], newPoint.geometry.coordinates[1]];
 
       slugPosRef.current = newPos;
       setSlugPosition(newPos);
@@ -142,13 +137,13 @@ const SlugChaseLogic = ({
 
   // Determine status message
   const getStatusMessage = () => {
-    if (distanceFromSlug < 3) return '💀 CAUGHT! Game Over!';
-    if (distanceFromSlug < 20) return '🚨 DANGER! Run faster!';
-    if (distanceFromSlug < 50) return '⚠️ Too close! Speed up!';
-    if (userSpeed === 0) return '🐢 Standing still - slug approaching at 5 km/h!';
-    if (userSpeed < 4) return '🐢 Too slow! Slug catching up!';
-    if (userSpeed > 10) return '🏃‍♂️ Too fast! Slug speeding up!';
-    return '✅ Perfect pace!';
+    if (distanceFromSlug < 3) return "💀 CAUGHT! Game Over!";
+    if (distanceFromSlug < 20) return "🚨 DANGER! Run faster!";
+    if (distanceFromSlug < 50) return "⚠️ Too close! Speed up!";
+    if (userSpeed === 0) return "🐢 Standing still - slug approaching at 5 km/h!";
+    if (userSpeed < 4) return "🐢 Too slow! Slug catching up!";
+    if (userSpeed > 10) return "🏃‍♂️ Too fast! Slug speeding up!";
+    return "✅ Perfect pace!";
   };
 
   return (
@@ -157,9 +152,7 @@ const SlugChaseLogic = ({
       <div>Distance: {distanceFromSlug.toFixed(1)}m</div>
       <div>Your Speed: {userSpeed.toFixed(1)} km/h</div>
       <div>Slug Speed: {slugSpeed.toFixed(1)} km/h</div>
-      <div className="text-xs text-muted-foreground pt-1 border-t">
-        {getStatusMessage()}
-      </div>
+      <div className="text-xs text-muted-foreground pt-1 border-t">{getStatusMessage()}</div>
     </div>
   );
 };
