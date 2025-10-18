@@ -29,7 +29,7 @@ const SlugChaseLogic = ({
     // Spawn slug 200m away (roughly south-west)
     const from = turf.point([userPosition[0], userPosition[1]]);
     const bearing = 225; // South-west direction
-    const slugPoint = turf.destination(from, 0.2, bearing, { units: 'kilometers' });
+    const slugPoint = turf.destination(from, 0.5, bearing, { units: 'kilometers' });
     const initialSlugPos: [number, number] = [
       slugPoint.geometry.coordinates[0],
       slugPoint.geometry.coordinates[1]

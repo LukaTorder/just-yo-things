@@ -91,6 +91,7 @@ const RawGoogleMap = ({ apiKey, userPosition, slugPosition }: { apiKey: string; 
   const markerRef = useRef<any>(null);
   const slugMarkerRef = useRef<any>(null);
   const [loaded, setLoaded] = useState(false);
+  const fittedRef = useRef(false);
 
   useEffect(() => {
     let cancelled = false;
@@ -156,6 +157,16 @@ const RawGoogleMap = ({ apiKey, userPosition, slugPosition }: { apiKey: string; 
     const pos = { lat: slugPosition[1], lng: slugPosition[0] };
     slugMarkerRef.current.setPosition(pos);
   }, [slugPosition, loaded]);
+
+  // Fit both user and slug into view once when both are available
+  useEffect(() => {
+    if (!loaded || !mapRef.current || !userPosition || !slugPosition || fittedRef.current) return;
+    const bounds = new window.google.maps.LatLngBounds();
+    bounds.extend({ lat: userPosition[1], lng: userPosition[0] });
+    bounds.extend({ lat: slugPosition[1], lng: slugPosition[0] });
+    mapRef.current.fitBounds(bounds, 80);
+    fittedRef.current = true;
+  }, [loaded, userPosition, slugPosition]);
 
   return (
     <div className="relative h-[calc(100vh-8rem)]">
