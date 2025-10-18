@@ -28,7 +28,7 @@ const SlugChaseLogic = ({
   const [slugPosition, setSlugPosition] = useState<[number, number] | null>(null);
   const [distanceFromSlug, setDistanceFromSlug] = useState<number>(0);
   const [userSpeed, setUserSpeed] = useState<number>(0); // km/h
-  const [slugSpeed, setSlugSpeed] = useState<number>(15); // km/h (constant for demo, clearly visible)
+  const [slugSpeed, setSlugSpeed] = useState<number>(6); // km/h (constant for demo, clearly visible)
   const lastUserPosition = useRef<[number, number] | null>(null);
   const lastUpdateTime = useRef<number>(Date.now());
   const coinTimerRef = useRef<number>(0);
@@ -44,7 +44,7 @@ const SlugChaseLogic = ({
     // Spawn slug 200m away (roughly south-west)
     const from = turf.point([userPosition[0], userPosition[1]]);
     const bearing = 225; // South-west direction
-    const slugPoint = turf.destination(from, 0.5, bearing, { units: "kilometers" });
+    const slugPoint = turf.destination(from, 0.2, bearing, { units: "kilometers" });
     const initialSlugPos: [number, number] = [slugPoint.geometry.coordinates[0], slugPoint.geometry.coordinates[1]];
     setSlugPosition(initialSlugPos);
     slugPosRef.current = initialSlugPos;
