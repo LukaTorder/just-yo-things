@@ -17,7 +17,7 @@ const SlugChaseLogic = ({
   const [slugPosition, setSlugPosition] = useState<[number, number] | null>(null);
   const [distanceFromSlug, setDistanceFromSlug] = useState<number>(0);
   const [userSpeed, setUserSpeed] = useState<number>(0); // km/h
-  const [slugSpeed, setSlugSpeed] = useState<number>(4.5); // km/h
+  const [slugSpeed, setSlugSpeed] = useState<number>(5); // km/h (constant for demo)
   const lastUserPosition = useRef<[number, number] | null>(null);
   const lastUpdateTime = useRef<number>(Date.now());
   const coinTimerRef = useRef<number>(0);
@@ -87,27 +87,9 @@ const SlugChaseLogic = ({
     lastUpdateTime.current = now;
   }, [userPosition]);
 
-  // Calculate slug speed based on user speed
+  // For demo: use constant slug speed regardless of user speed
   useEffect(() => {
-    if (userSpeed === 0) {
-      setSlugSpeed(4.5); // Minimum speed when user is stationary
-      return;
-    }
-
-    let calculatedSpeed: number;
-
-    if (userSpeed > 10) {
-      // Running too fast - slug speeds up slightly to catch up
-      calculatedSpeed = userSpeed * 0.75 + 0.5;
-    } else {
-      // Normal case: slug is 0.75x user speed
-      calculatedSpeed = userSpeed * 0.75;
-    }
-
-    // Enforce minimum speed of 4.5 km/h
-    calculatedSpeed = Math.max(calculatedSpeed, 4.5);
-
-    setSlugSpeed(calculatedSpeed);
+    setSlugSpeed(5);
   }, [userSpeed]);
 
   // Move slug toward user based on calculated speed
@@ -127,10 +109,10 @@ const SlugChaseLogic = ({
         return;
       }
 
-      // Calculate how far slug moves in 2 seconds at current slug speed
-      const slugDistanceKm = (slugSpeed / 3600) * 2; // km per 2 seconds
+      // Calculate how far slug moves in 1 second at current slug speed
+      const slugDistanceKm = (slugSpeed / 3600) * 1; // km per 1 second
       
-      console.log(`🐌 Moving slug: ${slugSpeed.toFixed(1)} km/h = ${(slugDistanceKm * 1000).toFixed(2)}m per 2sec`);
+      console.log(`🐌 Moving slug: ${slugSpeed.toFixed(1)} km/h = ${(slugDistanceKm * 1000).toFixed(2)}m per sec`);
       
       // Calculate direction and move slug toward user
       const bearing = turf.bearing(from, to);
@@ -142,7 +124,7 @@ const SlugChaseLogic = ({
       
       setSlugPosition(newSlugPos);
       onSlugPositionUpdate(newSlugPos);
-    }, 2000); // Update every 2 seconds
+    }, 1000); // Update every 1 second
 
     return () => clearInterval(interval);
   }, [userPosition, slugPosition, slugSpeed]);
@@ -152,7 +134,7 @@ const SlugChaseLogic = ({
     if (distanceFromSlug < 3) return '💀 CAUGHT! Game Over!';
     if (distanceFromSlug < 20) return '🚨 DANGER! Run faster!';
     if (distanceFromSlug < 50) return '⚠️ Too close! Speed up!';
-    if (userSpeed === 0) return '🐢 Standing still - slug approaching at 4.5 km/h!';
+    if (userSpeed === 0) return '🐢 Standing still - slug approaching at 5 km/h!';
     if (userSpeed < 4) return '🐢 Too slow! Slug catching up!';
     if (userSpeed > 10) return '🏃‍♂️ Too fast! Slug speeding up!';
     return '✅ Perfect pace!';
