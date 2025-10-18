@@ -122,7 +122,7 @@ const SlugChaseLogic = ({
       const distance = turf.distance(from, to, { units: "meters" });
       setDistanceFromSlug(distance);
 
-      if (distance < 3 && !isCaught) {
+      if (distance < 20 && !isCaught) {
         setIsCaught(true);
         if (moveIntervalRef.current) {
           clearInterval(moveIntervalRef.current);
