@@ -105,38 +105,15 @@ const Game = () => {
       <div className="pt-16">
         <Map userPosition={userPosition} slugPosition={slugPosition} />
 
-        <div className="fixed top-20 left-4 right-4 z-10">
-          <Card className="p-3">
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-2">
-                <Navigation className={`w-4 h-4 ${isTracking ? 'text-green-500 animate-pulse' : 'text-muted-foreground'}`} />
-                <span className="text-sm font-medium">
-                  {isTracking ? 'GPS Active' : 'GPS Inactive'}
-                </span>
-              </div>
-              <Button 
-                onClick={isTracking ? stopTracking : startTracking} 
-                size="sm"
-                variant={isTracking ? 'destructive' : 'default'}
-              >
-                {isTracking ? 'Stop' : 'Start GPS'}
-              </Button>
-            </div>
-            {locationError && (
-              <p className="text-sm text-destructive mt-2">⚠️ {locationError}</p>
+        <div className="fixed top-20 left-4 z-10">
+          <Card className="p-2 flex items-center gap-2">
+            <Navigation className={`w-4 h-4 ${isTracking ? 'text-green-500 animate-pulse' : 'text-muted-foreground'}`} />
+            <span className="text-xs font-medium">
+              {isTracking ? 'GPS' : 'Off'}
+            </span>
+            {accuracy && isTracking && (
+              <span className="text-xs text-muted-foreground">±{accuracy.toFixed(0)}m</span>
             )}
-            {!userPosition && isTracking && (
-              <p className="text-sm text-muted-foreground mt-2">📡 Acquiring GPS signal...</p>
-            )}
-            {userPosition && (
-              <div className="mt-2 text-xs text-muted-foreground">
-                <div>📍 {userPosition[1].toFixed(6)}, {userPosition[0].toFixed(6)}</div>
-                {accuracy && <div>🎯 Accuracy: ±{accuracy.toFixed(0)}m</div>}
-              </div>
-            )}
-            <p className="text-xs text-muted-foreground mt-2 pt-2 border-t">
-              💡 Tip: Open this on your phone's browser for best GPS accuracy
-            </p>
           </Card>
         </div>
         
